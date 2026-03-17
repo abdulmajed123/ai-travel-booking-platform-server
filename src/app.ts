@@ -9,11 +9,11 @@ app.use(express.json());
 app.use(cors());
 
 // Application routes
-app.use("/api/v1", router);
+// app.use("/api/v1", router);
 
 // Testing route
 app.get("/", (req: Request, res: Response) => {
-  res.send("Event Management Server is running!");
+  res.send("Travel Booking Platform Server is running!");
 });
 
 // Not found route
