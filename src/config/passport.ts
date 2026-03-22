@@ -1,0 +1,56 @@
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import config from ".";
+import User from "../models/user.model";
+import crypto from "crypto";
+
+passport.serializeUser((user: any, done) => done(null, user._id));
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
+
+if (config.google_client_id) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: config.google_client_id,
+        clientSecret: config.google_client_secret,
+        callbackURL: `${config.server_url}/api/v1/auth/google/callback`,
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        try {
+          const email = profile.emails?.[0]?.value;
+          if (!email) return done(new Error("No email from Google"), false);
+
+          let user = await User.findOne({ googleId: profile.id });
+          if (!user) {
+            user = await User.findOne({ email });
+            if (user) {
+              user.googleId = profile.id;
+              await user.save();
+            } else {
+              user = await User.create({
+                name: profile.displayName,
+                email,
+                googleId: profile.id,
+                avatar: profile.photos?.[0]?.value,
+                isVerified: true,
+                password: crypto.randomBytes(32).toString("hex"),
+              });
+            }
+          }
+          done(null, user);
+        } catch (err) {
+          done(err, false);
+        }
+      },
+    ),
+  );
+}
+
+export default passport;

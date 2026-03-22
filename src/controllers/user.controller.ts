@@ -1,124 +1,74 @@
-import bcrypt from "bcrypt";
 import { Request, Response } from "express";
-import jwt, { Secret } from "jsonwebtoken";
+import User from "../models/user.model";
+import AppError from "../utils/AppError";
+import bcrypt from "bcrypt";
 import config from "../config";
-import { User } from "../models/user.model";
 
-// Register user
-const register = async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-
-    // Check if user already exists
-    const isUserExist = await User.findOne({ email });
-
-    if (isUserExist) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists!",
-      });
-    }
-
-    const savedUser = await User.create(req.body);
-
-    // Generate token
-    const token = jwt.sign(
-      { email: savedUser.email, role: savedUser.role },
-      config.jwt_secret as Secret,
-      { expiresIn: config.jwt_expires_in as any },
-    );
-
-    // Omit password from response
-    const userResponse = savedUser.toObject();
-    delete userResponse.password;
-
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: userResponse,
-      token,
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to register user",
-      error: err.message,
-    });
-  }
+// ─── Get my profile ───────────────────────────────────────────────
+export const getMyProfile = async (
+  req: Request & { user?: any },
+  res: Response,
+) => {
+  const user = await User.findById(req.user.id).select("-password");
+  if (!user) throw new AppError("User not found", 404);
+  res.status(200).json({ success: true, user });
 };
 
-// Login user
-const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
+// ─── Update my profile ────────────────────────────────────────────
+export const updateMyProfile = async (
+  req: Request & { user?: any },
+  res: Response,
+) => {
+  const user = await User.findById(req.user.id);
+  if (!user) throw new AppError("User not found", 404);
 
-    // Check if user exists
-    const user = await User.findOne({ email }).select("+password");
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
+  const { name, password, avatar } = req.body;
 
-    // Compare passwords
-    const isPasswordMatch = await bcrypt.compare(
+  if (name) user.name = name;
+  if (avatar) user.avatar = avatar;
+  if (password)
+    user.password = await bcrypt.hash(
       password,
-      user.password as string,
-    );
-    if (!isPasswordMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    // Generate token
-    const token = jwt.sign(
-      { email: user.email, role: user.role },
-      config.jwt_secret as Secret,
-      { expiresIn: config.jwt_expires_in as any },
+      Number(config.bcrypt_salt_rounds || 12),
     );
 
-    // Omit password from response
-    const userResponse = user.toObject();
-    delete userResponse.password;
-
-    res.status(200).json({
-      success: true,
-      message: "User logged in successfully",
-      token,
-      data: userResponse,
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to login",
-      error: err.message,
-    });
-  }
+  await user.save();
+  const updatedUser = await User.findById(user._id).select("-password");
+  res.status(200).json({ success: true, user: updatedUser });
 };
 
-// Get all users
-const getUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find().select("-password");
-    res.status(200).json({
-      success: true,
-      message: "Users fetched successfully",
-      data: users,
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch users",
-      error: err.message,
-    });
-  }
+// ─── Admin: Get all users ─────────────────────────────────────────
+export const getAllUsers = async (_req: Request, res: Response) => {
+  const users = await User.find().select("-password");
+  res.status(200).json({ success: true, users });
 };
 
-export const userControllers = {
-  register,
-  login,
-  getUsers,
+// ─── Admin: Get user by ID ────────────────────────────────────────
+export const getUserById = async (req: Request, res: Response) => {
+  const user = await User.findById(req.params.id).select("-password");
+  if (!user) throw new AppError("User not found", 404);
+  res.status(200).json({ success: true, user });
+};
+
+// ─── Admin: Delete user ───────────────────────────────────────────
+export const deleteUser = async (req: Request, res: Response) => {
+  const user = await User.findByIdAndDelete(req.params.id);
+  if (!user) throw new AppError("User not found", 404);
+  res.status(200).json({ success: true, message: "User deleted successfully" });
+};
+
+// ─── Admin: Change user role ──────────────────────────────────────
+export const changeUserRole = async (req: Request, res: Response) => {
+  const { userId, role } = req.body;
+  const user = await User.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  if (!["USER", "ADMIN"].includes(role))
+    throw new AppError("Role must be either USER or ADMIN", 400);
+
+  user.role = role;
+  await user.save();
+  res
+    .status(200)
+    .json({ success: true, message: "User role updated successfully", user });
 };

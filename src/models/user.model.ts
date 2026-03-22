@@ -1,53 +1,43 @@
+import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcrypt";
-import { Schema, model } from "mongoose";
 import config from "../config";
-import { IUser } from "../types/user.interface";
+
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password: string;
+  role: "USER" | "ADMIN";
+  googleId?: string;
+  avatar?: string;
+  isVerified?: boolean;
+  comparePassword?: (candidatePassword: string) => Promise<boolean>;
+}
 
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true, select: false },
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    password: { type: String, required: true },
+    role: { type: String, default: "USER" },
+    googleId: { type: String },
+    avatar: { type: String },
+    isVerified: { type: Boolean, default: false },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-// Pre-save middleware / hook : will run before saving a document
-userSchema.pre("save", async function (next) {
-  // 'this' refers to the document about to be saved
-  const user = this;
-
-  // Only hash the password if it has been modified (or is new)
-  if (!user.isModified("password")) {
-    return next();
-  }
-
-  // Hash password using bcrypt salt rounds from config
-  user.password = await bcrypt.hash(
-    user.password as string,
-    Number(config.bcrypt_salt_rounds),
-  );
-
-  next();
+// Password hash (Mongoose 7+ compatible)
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  const saltRounds = Number(config.bcrypt_salt_rounds || 12);
+  this.password = await bcrypt.hash(this.password, saltRounds);
 });
 
-// Post-save middleware / hook : will run directly after saving a document
-userSchema.post("save", function (user, next) {
-  // doc is the document that was just saved
-  // For example, we want to erase password field before returning doc after creation
-  // Or simply log the information
-  console.log(
-    `[Post-Save Hook]: A new user was created with email: ${user.email}`,
-  );
+// Compare password method
+userSchema.methods.comparePassword = async function (
+  candidatePassword: string,
+) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
-  // Note: Modifying doc here won't save it to DB (unless you call .save() again),
-  // but it does affect the object returned from the save() method in controller.
-  user.password = "";
-
-  next();
-});
-
-export const User = model<IUser>("User", userSchema);
+export default mongoose.model<IUser>("User", userSchema);
