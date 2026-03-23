@@ -87,12 +87,17 @@ export const googleCallback = (req: Request, res: Response) => {
     (err, user) => {
       if (err || !user)
         return res.redirect(`${config.client_url}/login?error=google_failed`);
+
+      // টোকেন জেনারেট করা
       const token = jwt.sign(
         { id: user._id, email: user.email, role: user.role },
         config.jwt_secret,
         { expiresIn: config.jwt_expires_in },
       );
-      res.redirect(`${config.client_url}/auth/callback?accessToken=${token}`);
+
+      // এখানে পরিবর্তন করুন: /auth/callback মুছে দিন
+      // এখন এটি ইউজারকে সরাসরি http://localhost:3000/?accessToken=... এ পাঠাবে
+      res.redirect(`${config.client_url}/?accessToken=${token}`);
     },
   )(req, res);
 };
