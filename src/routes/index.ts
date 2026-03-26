@@ -32,6 +32,7 @@ import { itemRoutes } from "./item.routes";
 import { UserRoutes } from "./user.routes";
 import { AuthRoutes } from "./auth.routes";
 import { bookingRoutes } from "./booking.routes"; // ✅ ১. বুকিং রাউট ইমপোর্ট করুন
+import { reviewRoutes } from "./review.routes";
 
 const router = express.Router();
 
@@ -51,6 +52,10 @@ const moduleRoutes = [
   {
     path: "/bookings", // ✅ ২. এখানে বুকিং পাথটি যোগ করুন
     route: bookingRoutes,
+  },
+  {
+    path: "/reviews",
+    route: reviewRoutes,
   },
 ];
 

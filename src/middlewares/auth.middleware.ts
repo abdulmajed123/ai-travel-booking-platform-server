@@ -15,7 +15,9 @@ export const auth = (
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, config.jwt_secret);
+    console.log(decoded);
     req.user = decoded;
+    console.log(req.user);
     next();
   } catch {
     return next(new AppError("Invalid token", 401));
