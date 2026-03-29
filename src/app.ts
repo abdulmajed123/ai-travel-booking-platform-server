@@ -1,19 +1,24 @@
 // import express, { Application, Request, Response } from "express";
 // import cors from "cors";
-// import router from "./routes"; // এটি আপনার routes/index.ts (Central Router) কে কল করবে
+// import router from "./routes";
 
 // const app: Application = express();
 
-// // ১. মিডেলওয়্যার (Middleware)
-// app.use(cors());
+// // ১. মিডেলওয়্যার (CORS এবং JSON Parser)
+// app.use(
+//   cors({
+//     origin: "http://localhost:3000", // আপনার ফ্রন্টএন্ড পোর্ট
+//     credentials: true,
+//     methods: ["GET", "POST", "PATCH", "DELETE"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//   }),
+// );
+
 // app.use(express.json());
 
-// // ২. মেইন রাউটার কানেকশন
-// // এখানে সরাসরি Auth বা User না লিখে শুধু "router" ব্যবহার করুন
-// // কারণ আপনার routes/index.ts ফাইলের ভেতরেই সব মডিউল (Items, Auth, User) রেজিস্টার করা আছে
+// // ২. মেইন রাউটার
 // app.use("/api/v1", router);
 
-// // ৩. টেস্টিং রুট
 // app.get("/", (req: Request, res: Response) => {
 //   res.send("Travel Booking Platform Server is running!");
 // });
@@ -26,19 +31,20 @@ import router from "./routes";
 
 const app: Application = express();
 
-// ১. মিডেলওয়্যার (CORS এবং JSON Parser)
 app.use(
   cors({
-    origin: "http://localhost:3000", // আপনার ফ্রন্টএন্ড পোর্ট
+    origin: "http://localhost:3000",
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
-app.use(express.json());
+// --- এই অংশটি পরিবর্তন করুন ---
+app.use(express.json({ limit: "10mb" })); // ১০ মেগাবাইট পর্যন্ত ডাটা এলাউ করা হলো
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+// --------------------------
 
-// ২. মেইন রাউটার
 app.use("/api/v1", router);
 
 app.get("/", (req: Request, res: Response) => {

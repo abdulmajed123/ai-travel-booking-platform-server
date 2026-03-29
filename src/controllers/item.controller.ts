@@ -22,24 +22,6 @@ const createItem = async (req: Request, res: Response) => {
   }
 };
 
-// Get all Items
-// const getAllItems = async (req: Request, res: Response) => {
-//   try {
-//     const Items = await Item.find();
-//     res.status(200).json({
-//       success: true,
-//       message: "Items fetched successfully",
-//       data: Items,
-//     });
-//   } catch (err: any) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch Items",
-//       error: err.message,
-//     });
-//   }
-// };
-
 const getAllItems = async (req: Request, res: Response) => {
   try {
     const {

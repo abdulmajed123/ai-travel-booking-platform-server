@@ -6,31 +6,38 @@ export const createBooking = async (req: Request, res: Response) => {
   try {
     const { itemId, quantity, price } = req.body;
 
-    // Auth middleware থেকে আসা আইডি (id অথবা _id চেক)
-    const userId = req.user.id || req.user._id;
+    // ১. ইউজার আইডি নিশ্চিত করা
+    const userId = req.user?.id || req.user?._id;
 
     if (!userId) {
       return res
         .status(401)
-        .json({ success: false, message: "ইউজার অথেন্টিকেশন পাওয়া যায়নি!" });
+        .json({ success: false, message: "ইউজার অথেন্টিকেশন পাওয়া যায়নি!" });
     }
 
-    const booking = await Booking.create({
+    // ২. বুকিং তৈরি করা
+    const newBooking = await Booking.create({
       userId,
       itemId,
       quantity,
       price,
     });
 
+    // ৩. সমস্যা সমাধান: তৈরি করা বুকিংটিকে সাথে সাথে পপুলেট করা
+    // যাতে রেসপন্সে userId এর জায়গায় পুরো অবজেক্ট (নাম, ইমেইলসহ) আসে
+    const populatedBooking = await Booking.findById(newBooking._id)
+      .populate("userId", "name email")
+      .populate("itemId");
+
     res.status(201).json({
       success: true,
-      message: "বুকিং সফলভাবে সম্পন্ন হয়েছে",
-      data: booking,
+      message: "বুকিং সফলভাবে সম্পন্ন হয়েছে",
+      data: populatedBooking, // এখানে পপুলেট করা ডাটা পাঠাচ্ছি
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: error.message || "সার্ভারে সমস্যা হয়েছে",
+      message: error.message || "সার্ভারে সমস্যা হয়েছে",
     });
   }
 };

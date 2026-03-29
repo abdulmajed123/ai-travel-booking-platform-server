@@ -14,27 +14,42 @@ export const getMyProfile = async (
   res.status(200).json({ success: true, user });
 };
 
-// ─── Update my profile ────────────────────────────────────────────
+// backend/controllers/user.controller.ts-এ গিয়ে এই অংশটুকু চেক করুন
 export const updateMyProfile = async (
   req: Request & { user?: any },
   res: Response,
 ) => {
-  const user = await User.findById(req.user.id);
-  if (!user) throw new AppError("User not found", 404);
+  const { name, avatar, password } = req.body;
 
-  const { name, password, avatar } = req.body;
+  // পেলোড থেকে ID নিন (নিশ্চিত করুন আপনার auth মিডলওয়্যার req.user.id সেট করছে)
+  const userId = req.user.id;
 
-  if (name) user.name = name;
-  if (avatar) user.avatar = avatar;
-  if (password)
-    user.password = await bcrypt.hash(
+  const updateData: any = {
+    ...(name && { name }),
+    ...(avatar && { avatar }),
+  };
+
+  // যদি পাসওয়ার্ড আপডেট করতে চান তবে সেটি হ্যাশ করে নিতে হবে
+  if (password) {
+    updateData.password = await bcrypt.hash(
       password,
-      Number(config.bcrypt_salt_rounds || 12),
+      Number(config.bcrypt_salt_rounds),
     );
+  }
 
-  await user.save();
-  const updatedUser = await User.findById(user._id).select("-password");
-  res.status(200).json({ success: true, user: updatedUser });
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true },
+  ).select("-password");
+
+  if (!updatedUser) throw new AppError("User not found", 404);
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    user: updatedUser,
+  });
 };
 
 // ─── Admin: Get all users ─────────────────────────────────────────
