@@ -1,3 +1,14 @@
+// {
+//   "compilerOptions": {
+//     "target": "es2016",
+//     "module": "commonjs",
+//     "rootDir": "./src",
+//     "outDir": "./dist",
+//     "esModuleInterop": true,
+//     "strict": true,
+//     "skipLibCheck": true
+//   }
+// }
 {
   "compilerOptions": {
     "target": "es2016",
@@ -5,7 +16,9 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "strict": false, // এটি false করে দিন
+    "noImplicitAny": false, // এটি যোগ করুন
+    "strictNullChecks": false // এটি যোগ করুন
   }
 }

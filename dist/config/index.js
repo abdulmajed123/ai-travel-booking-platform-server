@@ -1,0 +1,29 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
+dotenv_1.default.config({ path: path_1.default.join(process.cwd(), ".env") });
+exports.default = {
+    // Server
+    port: process.env.PORT || 5000,
+    // Database
+    database_url: process.env.MONGODB_URI,
+    // Bcrypt
+    bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS || 12,
+    // JWT
+    jwt_secret: process.env.JWT_SECRET,
+    jwt_expires_in: process.env.JWT_EXPIRES_IN || "15m",
+    jwt_refresh_secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+    // URLs
+    client_url: process.env.CLIENT_URL || "http://localhost:3000",
+    server_url: process.env.SERVER_URL || "http://localhost:5000",
+    // Google OAuth
+    google_client_id: process.env.GOOGLE_CLIENT_ID,
+    google_client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    // AI (optional)
+    gemini_api_key: process.env.GEMINI_API_KEY,
+};
