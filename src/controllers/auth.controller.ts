@@ -1,3 +1,108 @@
+// import { Request, Response } from "express";
+// import User from "../models/user.model";
+// import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
+// import config from "../config";
+// import AppError from "../utils/AppError";
+// import passport from "../config/passport";
+
+// const generateTokens = (payload: any) => ({
+//   accessToken: jwt.sign(
+//     { ...payload, role: payload.role.toLowerCase() }, // এখানে ছোট হাতের করে দিন
+//     config.jwt_secret,
+//     { expiresIn: config.jwt_expires_in },
+//   ),
+//   refreshToken: jwt.sign(
+//     { ...payload, role: payload.role.toLowerCase() }, // এখানেও
+//     config.jwt_refresh_secret,
+//     { expiresIn: config.jwt_refresh_expires_in },
+//   ),
+// });
+// export const register = async (req: Request, res: Response) => {
+//   const { name, email, password, role, avatar } = req.body;
+//   const existing = await User.findOne({ email });
+//   if (existing) throw new AppError("User already exists", 400);
+
+//   const user = await User.create({
+//     name,
+//     email,
+//     password,
+//     role,
+//     avatar,
+//     isVerified: true,
+//   });
+//   const tokens = generateTokens({
+//     id: user._id,
+//     email: user.email,
+//     role: user.role,
+//   });
+//   res.status(201).json({ success: true, user, ...tokens });
+// };
+
+// export const login = async (req: Request, res: Response) => {
+//   const { email, password } = req.body;
+//   const user = await User.findOne({ email }).select("+password");
+//   if (!user) throw new AppError("Invalid email or password", 401);
+
+//   const match = await bcrypt.compare(password, user.password);
+//   if (!match) throw new AppError("Invalid email or password", 401);
+
+//   const tokens = generateTokens({
+//     id: user._id,
+//     email: user.email,
+//     role: user.role,
+//   });
+//   res.status(200).json({ success: true, user, ...tokens });
+// };
+
+// export const refreshToken = async (req: Request, res: Response) => {
+//   const { refreshToken } = req.body;
+//   if (!refreshToken) throw new AppError("Refresh token required", 400);
+
+//   try {
+//     const decoded = jwt.verify(refreshToken, config.jwt_refresh_secret) as any;
+//     const tokens = generateTokens({
+//       id: decoded.id,
+//       email: decoded.email,
+//       role: decoded.role,
+//     });
+//     res.status(200).json({ success: true, ...tokens });
+//   } catch {
+//     throw new AppError("Invalid or expired refresh token", 401);
+//   }
+// };
+
+// // Google OAuth
+// export const googleAuth = (req: Request, res: Response, next: any) => {
+//   passport.authenticate("google", {
+//     scope: ["profile", "email"],
+//     session: false,
+//   })(req, res, next);
+// };
+
+// export const googleCallback = (req: Request, res: Response, next: any) => {
+//   passport.authenticate("google", { session: false }, (err: any, user: any) => {
+//     if (err || !user) {
+//       return res.redirect(`${config.client_url}/login?error=google_failed`);
+//     }
+
+//     // টোকেন পেলোড তৈরি (রোল চেকসহ)
+//     const payload = {
+//       id: user._id,
+//       email: user.email,
+//       role: user.role ? user.role.toLowerCase() : "user", // ডিফল্ট রোল 'user'
+//     };
+
+//     const token = jwt.sign(payload, config.jwt_secret as string, {
+//       expiresIn: config.jwt_expires_in,
+//     });
+
+//     // সরাসরি ক্লায়েন্ট ইউআরএল-এ রিডাইরেক্ট
+//     // নিশ্চিত করুন config.client_url = http://localhost:3000
+//     return res.redirect(`${config.client_url}/?accessToken=${token}`);
+//   })(req, res, next);
+// };
+
 import { Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcrypt";
@@ -8,16 +113,19 @@ import passport from "../config/passport";
 
 const generateTokens = (payload: any) => ({
   accessToken: jwt.sign(
-    { ...payload, role: payload.role.toLowerCase() }, // এখানে ছোট হাতের করে দিন
-    config.jwt_secret,
-    { expiresIn: config.jwt_expires_in },
+    { ...payload, role: payload.role.toLowerCase() },
+    config.jwt_secret as string, // এখানে 'as string' যোগ করা হয়েছে
+    { expiresIn: config.jwt_expires_in as jwt.SignOptions["expiresIn"] },
   ),
   refreshToken: jwt.sign(
-    { ...payload, role: payload.role.toLowerCase() }, // এখানেও
-    config.jwt_refresh_secret,
-    { expiresIn: config.jwt_refresh_expires_in },
+    { ...payload, role: payload.role.toLowerCase() },
+    config.jwt_refresh_secret as string, // এখানেও 'as string'
+    {
+      expiresIn: config.jwt_refresh_expires_in as jwt.SignOptions["expiresIn"],
+    },
   ),
 });
+
 export const register = async (req: Request, res: Response) => {
   const { name, email, password, role, avatar } = req.body;
   const existing = await User.findOne({ email });
@@ -31,6 +139,7 @@ export const register = async (req: Request, res: Response) => {
     avatar,
     isVerified: true,
   });
+
   const tokens = generateTokens({
     id: user._id,
     email: user.email,
@@ -60,7 +169,11 @@ export const refreshToken = async (req: Request, res: Response) => {
   if (!refreshToken) throw new AppError("Refresh token required", 400);
 
   try {
-    const decoded = jwt.verify(refreshToken, config.jwt_refresh_secret) as any;
+    const decoded = jwt.verify(
+      refreshToken,
+      config.jwt_refresh_secret as string, // এখানেও টাইপ কাস্টিং
+    ) as any;
+
     const tokens = generateTokens({
       id: decoded.id,
       email: decoded.email,
@@ -86,19 +199,18 @@ export const googleCallback = (req: Request, res: Response, next: any) => {
       return res.redirect(`${config.client_url}/login?error=google_failed`);
     }
 
-    // টোকেন পেলোড তৈরি (রোল চেকসহ)
     const payload = {
       id: user._id,
       email: user.email,
-      role: user.role ? user.role.toLowerCase() : "user", // ডিফল্ট রোল 'user'
+      role: user.role ? user.role.toLowerCase() : "user",
     };
 
-    const token = jwt.sign(payload, config.jwt_secret as string, {
-      expiresIn: config.jwt_expires_in,
-    });
+    const token = jwt.sign(
+      payload,
+      config.jwt_secret as string, // টাইপ কাস্টিং
+      { expiresIn: config.jwt_expires_in as jwt.SignOptions["expiresIn"] },
+    );
 
-    // সরাসরি ক্লায়েন্ট ইউআরএল-এ রিডাইরেক্ট
-    // নিশ্চিত করুন config.client_url = http://localhost:3000
     return res.redirect(`${config.client_url}/?accessToken=${token}`);
   })(req, res, next);
 };
